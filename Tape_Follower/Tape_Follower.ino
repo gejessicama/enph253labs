@@ -6,8 +6,8 @@
 #define PIN7 7
 //from the view of the robot pin 7 is right sensor and pin 0 is left sensor
 
-#define Kp 10 // experiment to determine this, start by something small that just makes your bot follow the line at a slow speed
-#define Kd 100 // experiment to determine this, slowly increase the speeds and adjust this value. ( Note: Kp < Kd) 
+#define Kp 0.01 // experiment to determine this, start by something small that just makes your bot follow the line at a slow speed
+#define Kd 0.1 // experiment to determine this, slowly increase the speeds and adjust this value. ( Note: Kp < Kd) 
 
 #define MAXSPEED 255 //the max speed of the motor
 #define NORMALSPEED 240 //the speed to go at when on the line
@@ -17,6 +17,7 @@
 // when it is off it will be LOW
 int left = HIGH; //the left sensor
 int right= HIGH; // the right sensor
+
 
 void setup() {
   #include <phys253setup.txt>
@@ -33,6 +34,9 @@ int error;
 
 int lastLeft = 0;
 int lastRight = 0;
+int response = 0;
+int rightSpeed = 0;
+int leftSpeed = 0;
 
 void loop() {
 
@@ -40,15 +44,19 @@ void loop() {
   right = digitalRead(PIN7); //hexadeciaml
 
   //if(lastLeft == 1 && left == 0){right = 1;} else if(lastRight == 1 && right == 0){left = 1;}
-  if(left == 0 && right ==0){error = -500;} else{error = (left*0 + right*1000)/(left + right) - 500;}
+  if(left == 0 && right ==0){error = 0;} else{error = (left*-1 + right*1)/(left + right);}
 
-  motorSpeed = (knob(6)/4) + Kp * error + Kd * (error - lastError);
-  if(motorSpeed > MAXSPEED){motorSpeed = MAXSPEED;} if(motorSpeed < 0){motorSpeed = 0;}
+  response = Kp * error + Kd * (error - lastError);
+  motorSpeed = (knob(6)/4); 
+  leftSpeed = motorSpeed + response;
+  leftSpeed = motorSpeed - response;
+  if(leftSpeed > MAXSPEED){leftSpeed =  MAXSPEED;} if(leftSpeed < 0){leftSpeed = 0;}
+  if(rightSpeed > MAXSPEED){rightSpeed =  MAXSPEED;} if(rightSpeed < 0){rightSpeed = 0;}
 
-  PWM = knob(7);
+  PWM = 125;
   
-  LCD.setCursor(0,0); LCD.print("DC:");  LCD.print(motorSpeed) ; LCD.print(" "); LCD.print(left);
-  LCD.setCursor(0,1); LCD.print("PWM:");  LCD.print(PWM) ; LCD.print(" "); LCD.print(right);
+  LCD.setCursor(0,0);  LCD.print(motorSpeed) ; LCD.print(" "); LCD.print(PWM);
+  LCD.setCursor(0,1);  LCD.print(right); LCD.print(" "); LCD.print(left);
 
   if(left == HIGH && right == HIGH){
       motor.speed(LEFT_MOTOR,motorSpeed);
@@ -68,6 +76,7 @@ void loop() {
   }
 
   delay(PWM);
+  LCD.clear();
   motor.stop_all();
   lastLeft = left; lastRight=right;
   lastError = error;
