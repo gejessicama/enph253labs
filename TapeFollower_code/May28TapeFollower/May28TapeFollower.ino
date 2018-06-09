@@ -53,8 +53,8 @@ void loop() {
 //  motorSpeed = (knob(6)/4); 
   leftSpeed = motorSpeed + response;
   rightSpeed = motorSpeed - response;
-  if(leftSpeed > MAXSPEED){leftSpeed =  MAXSPEED;} if(leftSpeed < 0){leftSpeed = 0;}
-  if(rightSpeed > MAXSPEED){rightSpeed =  MAXSPEED;} if(rightSpeed < 0){rightSpeed = 0;}
+  if(leftSpeed > MAXSPEED){leftSpeed =  MAXSPEED;} if(leftSpeed < -255){leftSpeed = -255;}
+  if(rightSpeed > MAXSPEED){rightSpeed =  MAXSPEED;} if(rightSpeed < -255){rightSpeed = -255;}
   
   LCD.setCursor(0,0);  LCD.print(rightSpeed); LCD.print(" "); LCD.print(leftSpeed);
   LCD.setCursor(0,1);  LCD.print(right); LCD.print(" "); LCD.print(left);
