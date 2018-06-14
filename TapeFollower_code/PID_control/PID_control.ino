@@ -4,23 +4,23 @@
 #define LEFT_MOTOR 0
 #define RIGHT_MOTOR 3
 
-
-#define ON_TAPE 600
-#define OFF_TAPE 300
+#define right_on 650
+#define left_on 120
 
 //from the robot's perspective
 #define RPIN 2
 #define LPIN 4
 
 //PID constants
-#define Kp 25 
-#define Kd 0 
+double Kp;
+double Kd;
 #define Ki 0
 
 #define MAXSPEED 255 //the maximum speed of the motor
-#define NORMAL_SPEED 225
+#define NORMAL_SPEED 240
 #define PWM 70
 #define CONST_ERR 100
+int Gain =  1; // the gain very assertive
 
 // when it is on the tape it will be high
 // when it is off it will be low
@@ -38,27 +38,25 @@ int response = 0;
 int rightSpeed = 0;
 int leftSpeed = 0;
 double avg;
-bool lost;
+int lError = 0;
 
 int sign(int left, int right){
-  if(left == right)
-    return 0;
-  if(left > right)
-    return -1;
+  if(left == right) return 0;
+  if(left > right) return -1;
   return 1;
 }
 
-int calculatePID(int error,int previousError,int ErrorSum)
+int calculatePID(int error,int ErrorSum, int lError)
 {
   int P = error;
   int I = ErrorSum + error;
-  int D = error-previousError;
-  return (Kp*P) + (Ki*I) + (Kd*D);
+  int D = error - lError;
+  return ((Kp*P) + (Ki*I) + (Kd*D)) * Gain;
 }
+
 
 void setup() {
   #include <phys253setup.txt>
-  Serial.begin(9600);
   
   lastLeft = analogRead(LPIN); //hexadeciaml
   lastRight = analogRead(RPIN); //hexadeciaml
@@ -67,45 +65,37 @@ void setup() {
 
 void loop() {
 
-  
+
     //read sensors
-    left = -1*analogRead(LPIN); //0 to -1023
+    left = analogRead(LPIN); //0 to -1023
     right = analogRead(RPIN); //0 to 1023
 
+    Kp = map(knob(6),0,1023,0,100);
+    Kd = map(knob(7),0,1023,0,15);
+
     //calc difference and position
-    avg = (left + right) / 2.0;
+    //avg = (left + right) / 2.0;
 
-
-    if(left >= -1 * OFF_TAPE && right <= OFF_TAPE){ //they are not on tape
-        if(fabs(avg - 0.01) > 0.1){
-        // left and right not equal
-            error = avg * 2;
-        }else{ //the values are equal but we do not see tape
-            error = 0;
-            lost =true;
-        }
+    if(left >= left_on && right >= right_on){
+      error = 0;
+    }else if(left < left_on && right < right_on){
+      error = 5 * sign(lastLeft,lastRight);
     }else{
-        error = avg;
-        lost = false;
+      error = 1 * sign(left,right);
     }
 
-    if(lost != true){ // we are not lost so we should ontinue forward
-        response = calculatePID(error,lastError,sumError);
-        leftSpeed = NORMAL_SPEED + response;
-        rightSpeed = NORMAL_SPEED - response;
-
-        lastLeft = left; lastRight=right;
-    }else{ // we are lost so we need to go back using our previous reading
-        leftSpeed = MAXSPEED*sign(lastLeft*-1,lastRight);
-        rightSpeed = -MAXSPEED*sign(lastLeft*-1,lastRight);
-
-    }
+   // we are not lost so we should ontinue forward
+    response = calculatePID(error,sumError,lError);
+    leftSpeed = NORMAL_SPEED - response;
+    rightSpeed = NORMAL_SPEED + response;
+    lastLeft = left; lastRight=right;
 
     if(leftSpeed > MAXSPEED){leftSpeed =  MAXSPEED;} if(leftSpeed < -255){leftSpeed = -255;}
     if(rightSpeed > MAXSPEED){rightSpeed =  MAXSPEED;} if(rightSpeed < -255){rightSpeed = -255;}
     
-    LCD.setCursor(0,0);  LCD.print(rightSpeed); LCD.print(" "); LCD.print(leftSpeed);
-    LCD.setCursor(0,1);  LCD.print(RPIN); LCD.print(": "); LCD.print(right); LCD.print(" "); LCD.print(LPIN); LCD.print(": "); LCD.print(left);
+    //LCD.setCursor(0,0);  LCD.print(rightSpeed); LCD.print(" "); LCD.print(leftSpeed);
+    //LCD.setCursor(0,1);  LCD.print(RPIN); LCD.print(": "); LCD.print(right); LCD.print(" "); LCD.print(LPIN); LCD.print(": "); LCD.print(left);
+    LCD.setCursor(0,0);  LCD.print(Kp); LCD.print("   "); LCD.print(Kd);
     
     motor.speed(LEFT_MOTOR,leftSpeed);
     motor.speed(RIGHT_MOTOR,rightSpeed);
@@ -114,4 +104,9 @@ void loop() {
     
     motor.stop_all();
     lastError = error; sumError += error;
+
+    //sumError > 10 ? sumError = 10 : sumError=sumError;
+    if(lastError != error){
+      lError = lastErrorr;
+    }
 }
